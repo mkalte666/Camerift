@@ -1,0 +1,26 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Camerift", "Camerift\Camerift.vcxproj", "{D081BD68-4FA4-4757-9903-7FE1E9451C91}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Camerift_server", "Camerift_server\Camerift_server.vcxproj", "{01EEA15C-45A6-4C19-92B7-9B17CF69653A}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D081BD68-4FA4-4757-9903-7FE1E9451C91}.Debug|Win32.ActiveCfg = Debug|Win32
+		{D081BD68-4FA4-4757-9903-7FE1E9451C91}.Debug|Win32.Build.0 = Debug|Win32
+		{D081BD68-4FA4-4757-9903-7FE1E9451C91}.Release|Win32.ActiveCfg = Release|Win32
+		{D081BD68-4FA4-4757-9903-7FE1E9451C91}.Release|Win32.Build.0 = Release|Win32
+		{01EEA15C-45A6-4C19-92B7-9B17CF69653A}.Debug|Win32.ActiveCfg = Debug|Win32
+		{01EEA15C-45A6-4C19-92B7-9B17CF69653A}.Debug|Win32.Build.0 = Debug|Win32
+		{01EEA15C-45A6-4C19-92B7-9B17CF69653A}.Release|Win32.ActiveCfg = Release|Win32
+		{01EEA15C-45A6-4C19-92B7-9B17CF69653A}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
