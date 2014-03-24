@@ -6,7 +6,7 @@
 CameriftInstance::CameriftInstance(const char* ip, int port) : m_hmd()
 {
 	m_runable = false;
-	bool base_init = false;
+	m_base_init = false;
 	std::cout <<	"Camerift. (c) Malte Kießling 2013-2014\n" <<
 					"View and see your Webcams with the Oculus Rift.\n" <<
 					"Additional parameters are <camerift> [ip] [port]!\n" << 
@@ -69,14 +69,14 @@ CameriftInstance::CameriftInstance(const char* ip, int port) : m_hmd()
 					
 					//The rest of the init is In InitGL(), what MUST be called from the main thread!
 					//But also the main-part of the Initialisatioin is compleate, so
-					base_init = true;
+					m_base_init = true;
 				}
 			}
 		}
 	}
 
 	//Check if we can start etc. For debugging, haveing a nice UI etc.
-	if(!base_init) {
+	if(!m_base_init) {
 		std::cerr << "Error in Initialisation!\n";	
 	}
 	else {
@@ -308,6 +308,7 @@ void CameriftInstance::Render()
 
 void CameriftInstance::InitGL()
 {
+	if(!m_base_init) return;
 	m_window.reset(new window(m_width, m_height, "Camerift"));
 	
 	//Now some more OpenGL stuff: Wee need a VerexArray-id, the framebuffer, the textures, ...

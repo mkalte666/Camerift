@@ -30,6 +30,9 @@ int main(int argc, char**argv)
 	CameriftInstance Instance(ip, port);
 	Instance.InitGL();
 	Instance.loop();
+
+	//Deinit systems
+	DestroyHMD();
 	return 0;
 
 }

@@ -30,6 +30,7 @@ protected:
 private:
 	//First, basic stuff. Displaying, HMD etc. 
 	bool						m_runable;
+	bool						m_base_init;
 	std::auto_ptr<window>		m_window;
 	int							m_width;
 	int							m_height;

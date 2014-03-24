@@ -9,10 +9,7 @@ typedef OVR::Util::Render::StereoEye hmdcontroler_eye;
 #define EYE_RIGHT OVR::Util::Render::StereoEye_Right
 
 void InitHMD(); 
-
-
-
-
+void DestroyHMD();
 
 class hmdcontroler
 {

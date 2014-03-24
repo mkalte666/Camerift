@@ -12,6 +12,11 @@ void InitHMD()
 	OVR::System::Init(OVR::Log::ConfigureDefaultLog(OVR::LogMask_All));
 }
 
+void DestroyHMD()
+{
+	OVR::System::Destroy();
+}
+
 hmdcontroler::hmdcontroler()
 {
 	m_valid = false;
