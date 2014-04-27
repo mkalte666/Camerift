@@ -69,12 +69,12 @@ window::window(int w, int h, const char* title) : m_width(w), m_height(h), m_tit
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	//Creating window and context
-	m_window = glfwCreateWindow(m_width, m_height, m_title, /*NULL*/ glfwGetPrimaryMonitor(), NULL); //Window
+	m_window = glfwCreateWindow(m_width, m_height, m_title, NULL /*glfwGetPrimaryMonitor()*/, NULL); //Window
 	glfwMakeContextCurrent(m_window); //Context
 	//Init Glew
 	glewExperimental = GL_TRUE;
 	GLenum err = glewInit(); 
-	glFrontFace(GL_CW);
+	glFrontFace(GL_CCW);
 
 	int errorcode = glGetError();
 	if(errorcode!= GL_NO_ERROR) {
@@ -104,9 +104,14 @@ window::window(int w, int h, const char* title) : m_width(w), m_height(h), m_tit
 */
 window::~window(void)
 {
+	glfwDestroyWindow(m_window);
 	glfwTerminate();
 }
 
+void window::Delete() 
+{
+	
+}
 /*
 * @name: SetWindowTitle
 * @param: const char* title: The new title for the window
@@ -149,7 +154,7 @@ void window::SwapBuffers(void)
 */
 bool window::GetIsAlive(void)
 {
-	 return m_workingWindow && !GetMouseButtonState(1);
+	 return m_workingWindow && !GetKeyState(GLFW_KEY_ESCAPE);
 }
 
 void window::SetCursor(double x, double y)

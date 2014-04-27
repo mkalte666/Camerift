@@ -14,6 +14,8 @@ public:
 	window(int w, int h, const char* title = "OwlEngine");
 	~window(void);
 
+	void					Delete();
+
 	void					SetWindowTitle(const char* title);
 	const char*				GetWindowTitle(void);
 

@@ -78,10 +78,12 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="servocontroler.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\shared\base.h" />
     <ClInclude Include="..\shared\networkcmd.h" />
+    <ClInclude Include="servocontroler.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

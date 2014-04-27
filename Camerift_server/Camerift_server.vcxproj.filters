@@ -18,12 +18,18 @@
     <ClCompile Include="main.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
+    <ClCompile Include="servocontroler.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\shared\base.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
     <ClInclude Include="..\shared\networkcmd.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="servocontroler.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
   </ItemGroup>

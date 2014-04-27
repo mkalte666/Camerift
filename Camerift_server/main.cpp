@@ -5,7 +5,7 @@ Author(s): Malte Kieﬂling (mkalte666)
 */
 #include "../shared/base.h"
 #include "../shared/networkcmd.h"
-
+#include "servocontroler.h"
 
 using namespace std;
 
@@ -45,9 +45,8 @@ int main(int argc, char**argv)
 	}
 	cout << "Done. Trying to create capture...\n";
 	//Lets create a Mat and a Capture for the webcams
-	cv::VideoCapture left_capture;
-	left_capture.open(0);
-	cv::VideoCapture right_capture(1);
+	cv::VideoCapture left_capture(0);
+	cv::VideoCapture right_capture(10);
 	int num_cams = 2;
 	//Look if we have webcams connected
 	if(!left_capture.isOpened()) {
@@ -62,34 +61,37 @@ int main(int argc, char**argv)
 		onlyLeftCapture = true;
 		num_cams = 1;
 		cout << "Warning: Running in Left-view-only-mode!!! Adding a second webcam might be a good idea!\n";
-	}
+	} 
 	
 	bool running = true;
 	cout << "Succesfull! Now I wait for connections...\n";
 	//Ok, now it's time to wait until we get commands (See shared/networkcommands.h) from the client. 
 	cv::Mat frame_left;
 	cv::Mat frame_right;
+	
+	left_capture >> frame_left;
+	if(!onlyLeftCapture)
+		right_capture >> frame_right;
+	else {
+		frame_left.copyTo(frame_right);
+	}
+
 
 	//Listen for a connection
 	listen(serversock, 1);
 	SOCKET connectedSocket;
 	connectedSocket = accept(serversock, (SOCKADDR*)&remote_addr, &remote_addr_len);
+	onlyLeftCapture = true;
+	servocontroler servos("COM9");
+
 	while(running) {
 		//Capture magic
 		cv::waitKey(16);
-		left_capture >> frame_left;
-		if(!onlyLeftCapture)
-			right_capture >> frame_right;
-		else {
-			frame_left.copyTo(frame_right);
-		}
-		//imshow("Image", frame_right);
-		//imshow("ImageL", frame_left);
-		unsigned char *left_data = (unsigned char*)(frame_left.data);
-		unsigned char *right_data = (unsigned char*)(frame_right.data);
+		
 		//Network magic
 		char cmd[NET_CMD_BUFFER_LENGTH];
 		cmd[0] = 0;
+		float *rotation = new float[3];
 		//Read the cmd from the client
 		recv(connectedSocket,cmd,NET_CMD_BUFFER_LENGTH,0);
 		int size_image = 0;
@@ -119,12 +121,29 @@ int main(int argc, char**argv)
 		//The clienet will (hopefully) ask for the size of the image before requesting one, but he DON'T have to. The commands below are just sending the images in raw data. 
 		//Maybe encoding is a usefull thing to implement here...
 		case NET_CMD_GET_IMAGE_LEFT:
+			left_capture >> frame_left;
 			size_image = frame_left.cols*frame_left.rows*3; //RGB...
-			send(connectedSocket, (char*)left_data, size_image, 0);
+			send(connectedSocket, (char*)frame_left.data, size_image, 0);
 			break;
+
 		case NET_CMD_GET_IMAGE_RIGHT:
+			if(!onlyLeftCapture)
+				right_capture >> frame_right;
+			else {
+				frame_left.copyTo(frame_right);
+			}
 			size_image = frame_left.cols*frame_left.rows*3;
-			send(connectedSocket, (char*)right_data, size_image, 0);
+			send(connectedSocket, (char*)frame_right.data, size_image, 0);
+			break;
+
+		//The client will send us the rotation so we can send it to the servos/steppers/...
+		case NET_CMD_SET_ROT:
+			recv(connectedSocket,(char*)rotation,NET_CMD_ROT_DATA,0);
+			//debug
+			std::cout << "Rotation: X[" << rotation[0] << "] Y][" << rotation[1] << "] Z[ " << rotation[2] << std::endl;
+			servos.WriteCmd(servocontroler::CMD_SET_SERVO);
+			servos.WriteData((char*)rotation, sizeof(float[3]));
+
 			break;
 		
 		case NET_CMD_SET_SERVERSTOP:

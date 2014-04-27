@@ -1,4 +1,8 @@
-//#include "stdafx.h"
+/*
+File: HMD.h
+Purpose: Contains the functions to communicate with the oculus sdk
+Author(s): Malte Kieﬂling (mkalte666)
+*/
 #include <iostream>
 #include "HMD.h"
 
@@ -51,13 +55,20 @@ hmdcontroler::hmdcontroler()
     else
         m_stereo_config.SetDistortionFitPointVP(0.0f, 1.0f);
 
+	//FOV (we set this static - i will find out how to calculate this dynamic, but for now...)
+	m_vFOV = 110.0f;
+	m_hFOV = 90.0f;
+
 	m_valid = true;
 }
 
 hmdcontroler::~hmdcontroler()
 {
 	delete m_pDistortionK;
-
+	m_pSensor.Clear();
+	m_pHMD.Clear();
+	m_pManager.Clear();
+	
 }
 
 void hmdcontroler::Update()
@@ -73,19 +84,19 @@ void hmdcontroler::Update()
 float hmdcontroler::GetXAngle()
 {
 	if(!GetValid()) return 0;
-	return RadtoDegree(m_EyePitch);
+	return (float)RadtoDegree(m_EyePitch);
 }
 
 float hmdcontroler::GetYAngle()
 {
 	if(!GetValid()) return 0;
-	return RadtoDegree(m_EyeYaw);
+	return (float)RadtoDegree(m_EyeYaw);
 }
 
 float hmdcontroler::GetZAngle()
 {
 	if(!GetValid()) return 0;
-	return RadtoDegree(m_EyeRoll);
+	return (float)RadtoDegree(m_EyeRoll);
 }
 
 float* hmdcontroler::GetDistortion(hmdcontroler_eye eye)
@@ -93,8 +104,8 @@ float* hmdcontroler::GetDistortion(hmdcontroler_eye eye)
 	if(!GetValid()) return m_pDistortionK;
 	const OVR::Util::Render::StereoEyeParams& params = m_stereo_config.GetEyeRenderParams(eye);
 	const OVR::Util::Render::DistortionConfig& distortion = *params.pDistortion;
-	float HmdWarpParam[4]   = { distortion.K[0], distortion.K[1], distortion.K[2], distortion.K[3] };
-	return HmdWarpParam;
+	memcpy(&m_pDistortionK[0], &distortion.K[0], 4);
+	return m_pDistortionK;
 }
 
 float hmdcontroler::GetEyeDistance()
@@ -126,6 +137,8 @@ OVR::Vector2f hmdcontroler::GetLenseCenter(hmdcontroler_eye eye)
 						return Vector2f(x + (w + distortion.XCenterOffset * 0.5f)*0.5f,        y + h*0.5f);
 	}
 	
+	//So we need a default return. and because we can, its 0
+	return OVR::Vector2f(0,0);
 }
 
 OVR::Vector2f hmdcontroler::GetScreenCenter(hmdcontroler_eye eye) 
@@ -144,6 +157,8 @@ OVR::Vector2f hmdcontroler::GetScreenCenter(hmdcontroler_eye eye)
 		return Vector2f(x + w*0.5f,y + h*0.5f);
 	}
 	
+	//So we need a default return. and because we can, its 0
+	return OVR::Vector2f(0,0);
 }
 
 OVR::Vector2f hmdcontroler::GetScale(hmdcontroler_eye eye) 
@@ -162,7 +177,9 @@ OVR::Vector2f hmdcontroler::GetScale(hmdcontroler_eye eye)
 		float as = float(params.VP.w) / float(params.VP.h);
 		return Vector2f((w/2) * scaleFactor,(h/2) * scaleFactor * as);
 	}
-	
+
+	//So we need a default return. and because we can, its 0
+	return OVR::Vector2f(0,0);
 }
 
 OVR::Vector2f hmdcontroler::GetScaleIn(hmdcontroler_eye eye) 
@@ -171,6 +188,7 @@ OVR::Vector2f hmdcontroler::GetScaleIn(hmdcontroler_eye eye)
 	const OVR::Util::Render::StereoEyeParams& params = m_stereo_config.GetEyeRenderParams(eye);
 	if(params.pDistortion) {
 		unsigned int width = m_hmd.HResolution;
+		
         unsigned int height = m_hmd.VResolution;
 		const OVR::Util::Render::DistortionConfig& distortion = *params.pDistortion;
 		float scaleFactor               = 1.0f / distortion.Scale;
@@ -182,4 +200,21 @@ OVR::Vector2f hmdcontroler::GetScaleIn(hmdcontroler_eye eye)
 		return Vector2f((2/w),(2/h) / as);
 	}
 	
+	//So we need a default return. and because we can, its 0
+	return OVR::Vector2f(0,0);
+}
+
+float hmdcontroler::GetVScreenSize()
+{
+	return m_hmd.VScreenSize;
+}
+
+float hmdcontroler::GetHScreenSize()
+{
+	return m_hmd.HScreenSize;
+}
+
+float hmdcontroler::GetIpd()
+{
+	return m_hmd.InterpupillaryDistance;
 }

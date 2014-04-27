@@ -1,4 +1,8 @@
-
+/*
+File: CameriftInstance.h
+Purpose: Contains the main functions of the Camerift Instance class, wich manages the flow of the Program
+Author(s): Malte Kieﬂling (mkalte666)
+*/
 #include "CameriftInstance.h"
 #include "shaders.h"
 #include "../shared/base.h"
@@ -16,8 +20,8 @@ CameriftInstance::CameriftInstance(const char* ip, int port) : m_hmd()
 	
 	if(!m_hmd.GetValid()) {
 		std::cerr << "Could not Create HMD! Will launch with 1280*800 and no distortion!\n";
-		m_width = 1280;
-		m_height = 800;
+		m_width = 1920;
+		m_height = 1080;
 	}
 	else {
 		std::cout << "Done!\n Creating Window with the dimensions og the HMD...\n";
@@ -66,6 +70,9 @@ CameriftInstance::CameriftInstance(const char* ip, int port) : m_hmd()
 					m_rawLeft = new char[m_sizeImage];
 					m_rawRight = new char[m_sizeImage];
 					std::cout << "Done!\n";
+
+					
+
 					
 					//The rest of the init is In InitGL(), what MUST be called from the main thread!
 					//But also the main-part of the Initialisatioin is compleate, so
@@ -90,6 +97,7 @@ CameriftInstance::CameriftInstance(const char* ip, int port) : m_hmd()
 CameriftInstance::~CameriftInstance(void)
 {
 	SendCmd(NET_CMD_SET_SERVERSTOP);
+	closesocket(m_clientsocket);
 	//We need to free a lot of stuff, beginnig with the Textures, ending with other buffers...
 	delete m_rawRight;
 	delete m_rawLeft;
@@ -115,6 +123,11 @@ void CameriftInstance::SendCmd(char cmd)
 	char data[NET_CMD_BUFFER_LENGTH];
 	data[0] = cmd;
 	send(m_clientsocket, data, NET_CMD_BUFFER_LENGTH, 0);
+}
+
+void CameriftInstance::SendData(char* data, int len)
+{
+	send(m_clientsocket, data, len, 0);
 }
 
 void CameriftInstance::RecvData(char* dst, int len) 
@@ -147,15 +160,18 @@ void CameriftInstance::loop()
 		//Next is to send the Data to the server
 		//TODO
 
-		//Now get the new Images
-		SendCmd(NET_CMD_GET_IMAGE_LEFT);
-		RecvData(m_rawLeft, m_sizeImage);
-		SendCmd(NET_CMD_GET_IMAGE_RIGHT);
-		RecvData(m_rawRight, m_sizeImage);
-		//And set them as the new Textures
-		SetNewTextureData(m_left_texture, m_rawLeft, m_wImage, m_hImage);
-		SetNewTextureData(m_right_texture, m_rawRight, m_wImage, m_hImage);
-
+		if((glfwGetTime() - m_camera_timer) >= m_camera_frametime) {
+			//Now get the new Images
+			
+			SendCmd(NET_CMD_GET_IMAGE_LEFT);
+			RecvData(m_rawLeft, m_sizeImage);
+			SendCmd(NET_CMD_GET_IMAGE_RIGHT);
+			RecvData(m_rawRight, m_sizeImage);
+			//And set them as the new Textures
+			SetNewTextureData(m_left_texture, m_rawLeft, m_wImage, m_hImage);
+			SetNewTextureData(m_right_texture, m_rawRight, m_wImage, m_hImage);
+			m_camera_timer = glfwGetTime();
+		}
 		//And now comes the Render! (see the function)
 		Render();
 
@@ -182,6 +198,16 @@ bool CameriftInstance::Update()
 		m_leftModelMatrix = m_leftModelMatrix * glm::translate(glm::vec3(0.005f, 0.0f, 0.0f));
 		m_rightModelMatrix = m_rightModelMatrix * glm::translate(glm::vec3(-0.005f, 0.0f, 0.0f));
 	}
+
+	//Also we need to send the rotation to the server. So lets take a float-array
+	float *rotdata = new float[3];
+	//And fill it with the rotation
+	rotdata[0] = m_hmd.GetXAngle();
+	rotdata[1] = m_hmd.GetYAngle();
+	rotdata[2] = m_hmd.GetZAngle();
+	SendCmd(NET_CMD_SET_ROT);
+	SendData((char*)rotdata, NET_CMD_ROT_DATA);
+
 	return ret;
 }
 
@@ -209,7 +235,7 @@ void CameriftInstance::Render()
 	//Activate our Vertex- and UV buffer
 	//Vertex
 	glEnableVertexAttribArray(0);
-	glBindBuffer(GL_ARRAY_BUFFER, m_vertexbuffer_left);
+	glBindBuffer(GL_ARRAY_BUFFER, m_vertexbuffer_scaled_left);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
 	//UV
 	glEnableVertexAttribArray(1);
@@ -230,7 +256,7 @@ void CameriftInstance::Render()
 	//Activate our Vertex- and UV buffer
 	//Vertex
 	glEnableVertexAttribArray(0);
-	glBindBuffer(GL_ARRAY_BUFFER, m_vertexbuffer_right);
+	glBindBuffer(GL_ARRAY_BUFFER, m_vertexbuffer_scaled_right);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
 	//UV
 	glEnableVertexAttribArray(1);
@@ -335,7 +361,8 @@ void CameriftInstance::InitGL()
 	GLenum DrawBuffers[1] = {GL_COLOR_ATTACHMENT0};
 	glDrawBuffers(1, DrawBuffers); // "1" is the size of DrawBuffers
 					
-
+	m_vScale = 40/m_hmd.GetVerticalFOV();
+	m_hScale = 60/m_hmd.GetHorizontalFOV();
 	//So we have textures, we need something to render on. Oh, and buffers for The Texture-coords, too.
 	//And because we render with GL_QUADS, we can simply use quads :)
 	//Left Eye/side/what ever
@@ -348,9 +375,22 @@ void CameriftInstance::InitGL()
          0.0f,  1.0f, 0.0f,
 
 	};
+
+	static const GLfloat left_quad_scaled[] = { 
+		 0-m_hScale, 0-m_vScale, 0.0f,
+         m_hScale-1, 0-m_vScale, 0.0f,
+        0-m_hScale,  m_vScale, 0.0f,
+        0-m_hScale,  m_vScale, 0.0f,
+		m_hScale-1, 0-m_vScale, 0.0f,
+        m_hScale-1,  m_vScale, 0.0f,
+	};
 	glGenBuffers(1, &m_vertexbuffer_left);
 	glBindBuffer(GL_ARRAY_BUFFER, m_vertexbuffer_left);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(left_quad), left_quad, GL_STATIC_DRAW);
+	glGenBuffers(1, &m_vertexbuffer_scaled_left);
+	glBindBuffer(GL_ARRAY_BUFFER, m_vertexbuffer_scaled_left);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(left_quad_scaled), left_quad_scaled, GL_STATIC_DRAW);
+
 	//Right side
 	static const GLfloat right_quad[] = { 
 		0.0f, -1.0f, 0.0f,
@@ -360,10 +400,21 @@ void CameriftInstance::InitGL()
 		1.0f, -1.0f, 0.0f,
         1.0f,  1.0f, 0.0f,
 	};
+	static const GLfloat right_quad_scaled[] = { 
+		1-m_hScale, -0-m_vScale, 0.0f,
+        m_hScale, 0-m_vScale, 0.0f,
+        1-m_hScale,  m_vScale, 0.0f,
+        1-m_hScale,  m_vScale, 0.0f,
+		0+m_hScale, 0-m_vScale, 0.0f,
+        0+m_hScale,  m_vScale, 0.0f,
+	};
+
 	glGenBuffers(1, &m_vertexbuffer_right);
 	glBindBuffer(GL_ARRAY_BUFFER, m_vertexbuffer_right);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(right_quad), right_quad, GL_STATIC_DRAW);
-
+	glGenBuffers(1, &m_vertexbuffer_scaled_right);
+	glBindBuffer(GL_ARRAY_BUFFER, m_vertexbuffer_scaled_right);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(right_quad_scaled), right_quad_scaled, GL_STATIC_DRAW);
 	//Uv map for left
 	static const GLfloat left_uv[] = {
 		0.0f, 0.0f,
@@ -390,7 +441,7 @@ void CameriftInstance::InitGL()
 	glGenBuffers(1, &m_uvbuffer_right);
 	glBindBuffer(GL_ARRAY_BUFFER, m_uvbuffer_right);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(right_uv), right_uv, GL_STATIC_DRAW);
-	//And full uv
+
 	static const GLfloat full_uv[] = {
 		0.0f, 1.0f,
         1.0f, 1.0f, 
@@ -412,6 +463,7 @@ void CameriftInstance::InitGL()
 	//Fist for the RenderShader - only the texture
 	m_renderShaderTextureId = glGetUniformLocation(m_renderShader, "texture");
 	m_renderShaderMMatrixId = glGetUniformLocation(m_renderShader, "M");
+
 	//And some more stuff for the Post processing (texture and Parameters for the PostProcessing)
 	m_postProcessShaderTextureId	= glGetUniformLocation(m_postProcessShader, "texture");
 	m_distortionLenseCenterId		= glGetUniformLocation(m_postProcessShader, "LenseCenter");
@@ -427,8 +479,35 @@ void CameriftInstance::InitGL()
 		std::cout << "\n";
 	}
 
+	//We have to move the images together so they fit the IPD of the user. The ipd is given in meters, the hscreensize too. 
+	//We can calculate ipd/vscreensize  to get the 0-1 offset we need
+	float eyeOffset = (m_hmd.GetIpd()/m_hmd.GetHScreenSize());
+	m_leftModelMatrix = m_leftModelMatrix * glm::translate(glm::vec3(-(eyeOffset-0.5), 0.0f, 0.0f));
+	m_rightModelMatrix = m_rightModelMatrix * glm::translate(glm::vec3((eyeOffset-0.5), 0.0f, 0.0f));
 
-	
+
+
+
+
+	//We need to know the rate the Camras Update. To achive this, we will get 5 frames for each side and measure the time it needs. 
+					//The Frames will Only be updated when needed (So every N milliseconds. with that we secure a stable and high framerate.
+					std::cout << "Testing Framerate. Please Wait...\n";
+					double time_raw = (float)glfwGetTime();
+					double dt = 0;
+					for ( int i = 0; i < 5; i++) {
+						SendCmd(NET_CMD_GET_IMAGE_LEFT);
+						RecvData(m_rawLeft, m_sizeImage);
+						SendCmd(NET_CMD_GET_IMAGE_RIGHT);
+						RecvData(m_rawRight, m_sizeImage);
+						if(dt <  (glfwGetTime() - time_raw)) dt= glfwGetTime() - time_raw;
+						time_raw = glfwGetTime();
+					}
+					m_camera_frametime = dt;
+
+
+
+
+	m_camera_timer = glfwGetTime();
 	//Test if the Framebuffer etc. is ok, and if yes, we are ready to start!
 	if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
 		std::cerr << "Error in OpenGL creation. Make shoure your GPU supports 3.3!\n Framebuffer(!)\n";

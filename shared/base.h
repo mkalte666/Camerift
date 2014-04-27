@@ -1,3 +1,9 @@
+/*
+File: base.h
+Purpose: Contains basical includes often needed by different systems
+Author(s): Malte Kieﬂling (mkalte666)
+*/
+
 #ifndef BASE_HEADER
 #define BASE_HEADER
 

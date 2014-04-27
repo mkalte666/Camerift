@@ -20,17 +20,17 @@ int main(int argc, char**argv)
 
 	switch(argc) {
 	case 3:
-		port = atoi(argv[2]);
+		port = atoi(argv[2]); 
 	case 2:
-		ip =  argv[1];
+		ip =  argv[1]; 
 		break;
 
 	}
 
-	CameriftInstance Instance(ip, port);
-	Instance.InitGL();
-	Instance.loop();
-
+	CameriftInstance *Instance = new CameriftInstance(ip, port);
+	Instance->InitGL();
+	Instance->loop();
+	delete Instance;
 	//Deinit systems
 	DestroyHMD();
 	return 0;

@@ -1,0 +1,9 @@
+OpenGL:
+
+Arduino:
+http://playground.arduino.cc/Interfacing/CPPWindows
+http://msdn.microsoft.com/en-us/library/ff802693.aspx
+
+Gerneral:
+
+Oculus-stuff:

@@ -1,4 +1,9 @@
-﻿#ifndef HEADER_HMD
+﻿/*
+File: HMD.h
+Purpose: header for the hmdcontroler-class. Also includes libovr. 
+Author(s): Malte Kießling (mkalte666)
+*/
+#ifndef HEADER_HMD
 #define HEADER_HMD
 
 #include "OVR.h"
@@ -19,7 +24,10 @@ public:
 
 	bool GetValid() { return m_valid; }
 	int GetW() {return m_hmd.HResolution;}
-	int GetH() {return m_hmd.VResolution;};
+	float GetHScreenSize();
+	int GetH() {return m_hmd.VResolution;}
+	float GetVScreenSize();
+	float GetIpd();
 	void Update();
 	float GetXAngle();
 	float GetYAngle();
@@ -33,6 +41,8 @@ public:
 	OVR::Vector2f GetScale(hmdcontroler_eye eye);
 	OVR::Vector2f GetScaleIn(hmdcontroler_eye eye);
 	
+	float GetVerticalFOV() { return m_vFOV; }
+	float GetHorizontalFOV() { return m_hFOV; }
 	
 private:
 	Ptr<DeviceManager>				m_pManager;
@@ -51,6 +61,9 @@ private:
 	float							m_EyePitch;
 	float							m_EyeYaw;
 	float							m_LastEyeYaw;
+	
+	float							m_hFOV;
+	float							m_vFOV;
 	
 };
 
