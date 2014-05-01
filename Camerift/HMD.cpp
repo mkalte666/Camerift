@@ -120,6 +120,8 @@ const char* hmdcontroler::GetMonitorName()
 	return m_MonitorName;
 }
 
+//TODO: the next functions are doing the same. THE SAME. maybe we can merge stuff. 
+//Also they are doing the same every time they're called. That should be fixed, too. Memory IS availbe, so store it.
 OVR::Vector2f hmdcontroler::GetLenseCenter(hmdcontroler_eye eye) 
 {
 	if(!GetValid()) return OVR::Vector2f(0,0);

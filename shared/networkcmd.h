@@ -1,6 +1,6 @@
 /*
 File: networkcmd.h
-Purpose: A shared header containing some information needed for the network communikation
+Purpose: A shared header containing some information needed for the network communication
 Author(s): Malte Kieﬂling (mkalte666)
 */
 
