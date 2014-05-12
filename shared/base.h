@@ -15,6 +15,7 @@ Author(s): Malte Kieﬂling (mkalte666)
 #include <limits>
 #include <assert.h>
 #include <memory>
+#include <cmath>
 
 #ifdef _WIN32
 #include <winsock2.h>

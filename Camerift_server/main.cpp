@@ -45,7 +45,7 @@ int main(int argc, char**argv)
 	}
 	cout << "Done. Trying to create capture...\n";
 	//Lets create a Mat and a Capture for the webcams
-	cv::VideoCapture left_capture(0);
+	cv::VideoCapture left_capture(1);
 	cv::VideoCapture right_capture(10);
 	int num_cams = 2;
 	//Look if we have webcams connected
@@ -83,15 +83,16 @@ int main(int argc, char**argv)
 	connectedSocket = accept(serversock, (SOCKADDR*)&remote_addr, &remote_addr_len);
 	onlyLeftCapture = true;
 	servocontroler servos("COM9");
+	float *recvrotation = new float[3];
+	short *lastrotation = new short[3];
+	short *rotation = new short[3];
+	lastrotation[0] = rotation[0] = lastrotation[1] = rotation[1] = lastrotation[2] = rotation[2] = 0;
+	char cmd[NET_CMD_BUFFER_LENGTH];
 
 	while(running) {
 		//Capture magic
 		cv::waitKey(16);
-		
-		//Network magic
-		char cmd[NET_CMD_BUFFER_LENGTH];
 		cmd[0] = 0;
-		float *rotation = new float[3];
 		//Read the cmd from the client
 		recv(connectedSocket,cmd,NET_CMD_BUFFER_LENGTH,0);
 		int size_image = 0;
@@ -138,12 +139,27 @@ int main(int argc, char**argv)
 
 		//The client will send us the rotation so we can send it to the servos/steppers/...
 		case NET_CMD_SET_ROT:
-			recv(connectedSocket,(char*)rotation,NET_CMD_ROT_DATA,0);
+			recv(connectedSocket, (char*)recvrotation, NET_CMD_ROT_DATA, 0);
+			//The Rotation is float, the arduino wants intetger. So lets do it :) Also map -90 - 90 to 0-180. Also the rotation is MAX -180 - 180 -> short
+			rotation[0] = (short)floor(recvrotation[0]) + 90;
+			rotation[1] = (short)floor(recvrotation[1]) + 90;
+			rotation[2] = (short)floor(recvrotation[2]) + 90;
+			for (int i = 0; i < 3; i++) {
+				if (rotation[i] < 0)
+					rotation[i] = 0;
+				else if (rotation[i] > 180) 
+					rotation[i] = 180;
+			}
+			
 			//debug
-			std::cout << "Rotation: X[" << rotation[0] << "] Y][" << rotation[1] << "] Z[ " << rotation[2] << std::endl;
-			servos.WriteCmd(servocontroler::CMD_SET_SERVO);
-			servos.WriteData((char*)rotation, sizeof(float[3]));
-
+			if(rotation[0] != lastrotation[0] || rotation[1] != lastrotation[1] || rotation[2] != lastrotation[2]) {
+				std::cout << "Rotation: X[" << rotation[0] << "] Y][" << rotation[1] << "] Z[ " << rotation[2] << std::endl;
+				servos.WriteCmd(servocontroler::CMD_SET_SERVO);
+				servos.WriteData((char*)rotation, sizeof(short[3]));
+				lastrotation[0] = rotation[0];
+				lastrotation[1] = rotation[1];
+				lastrotation[2] = rotation[2];
+			}
 			break;
 		
 		case NET_CMD_SET_SERVERSTOP:

@@ -8,10 +8,14 @@
 //CMD_SET_SHUTDOWN 99
 
 int inByte = 0;         // incoming serial byte
-float *rotation;
+short *rotation;
+short *lastrot;
 Servo xrot;
 Servo yrot;
 Servo zrot;
+unsigned long time;
+short  recv_time;
+unsigned long recv_timer;
 
 void setup()
 {
@@ -21,45 +25,61 @@ void setup()
     ; // wait for serial port to connect. Needed for Leonardo only
   }
   
-  rotation = new float[3];
-  xrot.attach(0);
-  yrot.attach(1);
-  zrot.attach(2);
-  xrot.write(125);
-  yrot.write(125);
-  zrot.write(125);
+  rotation = new short[3];
+  lastrot  = new short[3];
+  rotation[0] = lastrot[0] = rotation[1] = lastrot[1] = rotation[2] = lastrot[2] = 0;
+  xrot.attach(3);
+  yrot.attach(2);
+  zrot.attach(4);
+  xrot.write(0);
+  yrot.write(0);
+  zrot.write(0);
+  recv_timer = time = millis();
+  recv_time = 20;
 }
 
 void loop()
 {
+  time = millis();
   // if we get a valid byte, read analog ins:
   if (Serial.available() > 0) {
     // get incoming byte:
     inByte = Serial.read();
-    char recvdata[sizeof(float[3])];
-    int i = 0;
-    switch(inByte) {
-    case 0:
-        for(i = 0; i<sizeof(float[3]);i++)
-          recvdata[i] = Serial.read();
-        rotation = (float*)&recvdata[0];
-        //Rotation comes in -180 - 180, we want (from the -90 - 90 range) it mapped to 0-255, so we add 90. 
-        rotation[0]+=90.00;
-        rotation[1]+=90.00;
-        rotation[2]+=90.00;
-        //now we map it to 0-255 and set the servos. 
-        xrot.write(rotation[0]*255/180);
-        yrot.write(rotation[1]*255/180);
-        zrot.write(rotation[2]*255/180);
-        //done, wait for new data!
-        break;
-        
-   case 99:
-        xrot.write(125);
-        yrot.write(125);
-        zrot.write(125);
+    if(millis()-recv_timer > recv_time) {
+      
+      char recvdata[sizeof(short[3])];
+      int i = 0;
+      switch(inByte) {
+      case 0:
+          for(i = 0; i<sizeof(short[3]);i++)
+            recvdata[i] = Serial.read();
+          rotation = (short*)&recvdata[0];
   
-     }      
+          //if(rotation[0]!= lastrot[0]) {
+            xrot.write(rotation[0]);
+            lastrot[0] = rotation[0];
+          //}
+          //if(rotation[1]!= lastrot[1]) {
+            yrot.write(rotation[1]);
+            lastrot[1] = rotation[1];
+          //}
+          //if(rotation[2]!= lastrot[2]) {
+            zrot.write(rotation[2]);
+            lastrot[2] = rotation[2];
+         // }
+          
+          
+          //done, wait for new data!
+          break;
+          
+     case 99:
+          xrot.write(90);
+          yrot.write(90);
+          zrot.write(90);
+    
+       }    
+       recv_timer = millis();
+    }  
   }
 }
 

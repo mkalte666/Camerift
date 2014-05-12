@@ -48,7 +48,11 @@ CameriftInstance::CameriftInstance(const char* ip, int port) : m_hmd()
 				server_addr.sin_family = AF_INET;
 				//And we connect. If possible. Else... not
 				int ret_connect = connect(m_clientsocket, (SOCKADDR*)&server_addr, sizeof(SOCKADDR));
-				if(ret_connect == -1) {
+				if (ret_connect == -1) {
+					//Sleep(1000);
+					ret_connect = connect(m_clientsocket, (SOCKADDR*)&server_addr, sizeof(SOCKADDR));
+				}
+				if (ret_connect == -1) {
 					std::cerr << "Error conecting to server. Is the server active and your address right?\n";
 				} else {
 					std::cout << "Done\n Now reciving basic information from server...\n";
@@ -72,7 +76,9 @@ CameriftInstance::CameriftInstance(const char* ip, int port) : m_hmd()
 					std::cout << "Done!\n";
 
 					
-
+					//Set servo-timers to 0 and the interval to something sensefull
+					m_servo_timer = 0;
+					m_servo_interval = 0.05;
 					
 					//The rest of the init is In InitGL(), what MUST be called from the main thread!
 					//But also the main-part of the Initialisatioin is compleate, so
@@ -199,14 +205,26 @@ bool CameriftInstance::Update()
 		m_rightModelMatrix = m_rightModelMatrix * glm::translate(glm::vec3(-0.005f, 0.0f, 0.0f));
 	}
 
-	//Also we need to send the rotation to the server. So lets take a float-array
-	float *rotdata = new float[3];
-	//And fill it with the rotation
-	rotdata[0] = m_hmd.GetXAngle();
-	rotdata[1] = m_hmd.GetYAngle();
-	rotdata[2] = m_hmd.GetZAngle();
-	SendCmd(NET_CMD_SET_ROT);
-	SendData((char*)rotdata, NET_CMD_ROT_DATA);
+	//The next step is also only done by a fixed interval. increase/decrease it with w and s
+	if (m_window->GetKeyState(GLFW_KEY_A)) {
+		m_servo_interval += 0.01;
+	}
+	if (m_window->GetKeyState(GLFW_KEY_S)) {
+		m_servo_interval -= 0.01;
+	}
+
+	if ((glfwGetTime() - m_servo_timer) >= m_servo_interval) {
+		//Also we need to send the rotation to the server. So lets take a float-array
+		float *rotdata = new float[3];
+		//And fill it with the rotation
+		rotdata[0] = m_hmd.GetXAngle();
+		rotdata[1] = m_hmd.GetYAngle();
+		rotdata[2] = m_hmd.GetZAngle();
+		//And send it to the server.
+		SendCmd(NET_CMD_SET_ROT);
+		SendData((char*)rotdata, NET_CMD_ROT_DATA);
+		m_servo_timer = glfwGetTime();
+	}
 
 	return ret;
 }

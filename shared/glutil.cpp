@@ -4,7 +4,7 @@ Purpose: Contains Opengl Utility functions. Source that was edited: opengl-tutor
 Author(s): Malte Kieﬂling (mkalte666)
 */
 #include "glutil.h"
-
+#include <algorithm>
 
 
 GLuint LoadShadersFromData(const char * vertex,const char * fragment){

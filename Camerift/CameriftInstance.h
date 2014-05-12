@@ -58,6 +58,8 @@ private:
 	int							m_hImage;
 	float						m_camera_frametime;
 	float						m_camera_timer;
+	float						m_servo_interval;
+	float						m_servo_timer;
 	//And the images in raw-format
 	char*						m_rawLeft;
 	char*						m_rawRight;
