@@ -75,6 +75,7 @@ private:
 
 	GLuint						m_vertexbuffer_left;
 	GLuint						m_vertexbuffer_right; 
+	GLuint						m_vertexbuffer_full;
 	GLuint						m_vertexbuffer_scaled_left;
 	GLuint						m_vertexbuffer_scaled_right;
 	GLuint						m_uvbuffer_left;
@@ -95,6 +96,15 @@ private:
 	GLuint						m_distortionScaleId;
 	GLuint						m_distortionScaleInId;
 	GLuint						m_distortionWarpParamId;
+
+	//Fun stuff
+	GLuint						m_ResId;
+	GLuint						m_toonShader;
+	GLuint						m_toonFBO;
+	GLuint						m_toonTEX;
+	GLuint						m_toonTEXId;
+	GLuint						m_toonDEP;
+	bool						m_toonEnabled;
 
 	//Vars for the eye-offsets
 	glm::mat4					m_leftModelMatrix;

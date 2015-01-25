@@ -41,17 +41,19 @@ int main(int argc, char**argv)
 	int binderr = bind(serversock, (SOCKADDR*)&server_addr, sizeof(SOCKADDR_IN));
 	if(binderr == SOCKET_ERROR) {
 		cerr << "Error while binding Socket at port "<< server_addr.sin_port << "! Do you have permissions to bind a socket?\n";
+		cin.get();
 		return 1;
 	}
 	cout << "Done. Trying to create capture...\n";
 	//Lets create a Mat and a Capture for the webcams
-	cv::VideoCapture left_capture(1);
+	cv::VideoCapture left_capture(0);
 	cv::VideoCapture right_capture(10);
 	int num_cams = 2;
 	//Look if we have webcams connected
 	if(!left_capture.isOpened()) {
 		num_cams = 0;
 		cerr << "No webcams connected to the system. Maybe you don't have the permission to access them?!\n";
+		cin.get();
 		return 1;
 	}
 	//If we cannot capture the 2. Webcam we want to use the same image as webcam1
@@ -82,7 +84,7 @@ int main(int argc, char**argv)
 	SOCKET connectedSocket;
 	connectedSocket = accept(serversock, (SOCKADDR*)&remote_addr, &remote_addr_len);
 	onlyLeftCapture = true;
-	servocontroler servos("COM9");
+	servocontroler servos("\\\\.\\COM11");
 	float *recvrotation = new float[3];
 	short *lastrotation = new short[3];
 	short *rotation = new short[3];
@@ -123,6 +125,7 @@ int main(int argc, char**argv)
 		//Maybe encoding is a usefull thing to implement here...
 		case NET_CMD_GET_IMAGE_LEFT:
 			left_capture >> frame_left;
+
 			size_image = frame_left.cols*frame_left.rows*3; //RGB...
 			send(connectedSocket, (char*)frame_left.data, size_image, 0);
 			break;

@@ -65,11 +65,11 @@ window::window(int w, int h, const char* title) : m_width(w), m_height(h), m_tit
 	//OpenGL profile and some Basiacal settings
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-	glfwWindowHint(GLFW_SAMPLES, 4);
+	glfwWindowHint(GLFW_SAMPLES, 8);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	//Creating window and context
-	m_window = glfwCreateWindow(m_width, m_height, m_title, glfwGetPrimaryMonitor(), NULL); //Window
+	m_window = glfwCreateWindow(m_width, m_height, m_title, /*NULL*/ glfwGetPrimaryMonitor(), NULL); //Window
 	glfwMakeContextCurrent(m_window); //Context
 	//Init Glew
 	glewExperimental = GL_TRUE;

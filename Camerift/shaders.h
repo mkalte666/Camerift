@@ -88,4 +88,5 @@ const char* g_fragment_shader = {
 	"}\n"
 };
 
+
 #endif

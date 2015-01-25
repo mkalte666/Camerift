@@ -49,7 +49,7 @@ CameriftInstance::CameriftInstance(const char* ip, int port) : m_hmd()
 				//And we connect. If possible. Else... not
 				int ret_connect = connect(m_clientsocket, (SOCKADDR*)&server_addr, sizeof(SOCKADDR));
 				if (ret_connect == -1) {
-					//Sleep(1000);
+					Sleep(1000);
 					ret_connect = connect(m_clientsocket, (SOCKADDR*)&server_addr, sizeof(SOCKADDR));
 				}
 				if (ret_connect == -1) {
@@ -83,6 +83,7 @@ CameriftInstance::CameriftInstance(const char* ip, int port) : m_hmd()
 					//The rest of the init is In InitGL(), what MUST be called from the main thread!
 					//But also the main-part of the Initialisatioin is compleate, so
 					m_base_init = true;
+					m_toonEnabled = false;
 				}
 			}
 		}
@@ -213,6 +214,14 @@ bool CameriftInstance::Update()
 		m_servo_interval -= 0.01;
 	}
 
+	if (m_window->GetKeyState(GLFW_KEY_T)) {
+		m_toonEnabled = true;
+	}
+
+	if (m_window->GetKeyState(GLFW_KEY_Z)) {
+		m_toonEnabled = false;
+	}
+
 	if ((glfwGetTime() - m_servo_timer) >= m_servo_interval) {
 		//Also we need to send the rotation to the server. So lets take a float-array
 		float *rotdata = new float[3];
@@ -235,7 +244,11 @@ void CameriftInstance::Render()
 	if(m_runable==false) return ;
 	//At first we Render the Camera-images on our Framebuffer.
 	//And there are things we need to do. First we set our viewport to Full
-	glBindFramebuffer(GL_FRAMEBUFFER, m_fbuffer);
+	if (m_toonEnabled)
+		glBindFramebuffer(GL_FRAMEBUFFER, m_toonFBO);
+	else
+		glBindFramebuffer(GL_FRAMEBUFFER, m_fbuffer);
+
 	glViewport(0,0,m_width, m_height);
 	//and we clear it
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -285,7 +298,31 @@ void CameriftInstance::Render()
 	glDisableVertexAttribArray(0);
 	glDisableVertexAttribArray(1);
 
+	if (m_toonEnabled) {
+		//_________________________________________________________________________________________________TTTTTTTTOOOOOONNNNNNNNNN
+		//t-t-t-toooon effect :)
+		glBindFramebuffer(GL_FRAMEBUFFER, m_fbuffer);
+		glViewport(0, 0, m_width, m_height);
+		//and we clear it
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glUseProgram(m_toonShader);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, m_toonTEX);
+		glUniform1i(m_toonTEXId, 0);
+		glUniform2f(m_ResId, m_width, m_height);
 
+		glEnableVertexAttribArray(0);
+		glBindBuffer(GL_ARRAY_BUFFER, m_vertexbuffer_full);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+		//UV
+		glEnableVertexAttribArray(1);
+		glBindBuffer(GL_ARRAY_BUFFER, m_uvbuffer_full);
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, (void*)0); //See the difference to above. i use layout-pos 1 insted of 0, and i have a vec2
+		//Aand draw right
+		glDrawArrays(GL_TRIANGLES, 0, 6);
+		glDisableVertexAttribArray(0);
+		glDisableVertexAttribArray(1);
+	}
 
 	//Ok, that is done. Our renderd image is now in m_fbo_texture. Lets render it again
 	//To remove the lense distortion :)
@@ -409,7 +446,7 @@ void CameriftInstance::InitGL()
 	glBindBuffer(GL_ARRAY_BUFFER, m_vertexbuffer_scaled_left);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(left_quad_scaled), left_quad_scaled, GL_STATIC_DRAW);
 
-	//Right side
+	//Right side and full
 	static const GLfloat right_quad[] = { 
 		0.0f, -1.0f, 0.0f,
         1.0f, -1.0f, 0.0f,
@@ -426,6 +463,14 @@ void CameriftInstance::InitGL()
 		0+m_hScale, 0-m_vScale, 0.0f,
         0+m_hScale,  m_vScale, 0.0f,
 	};
+	static const GLfloat full_quad[] = {
+		-1.0f, -1.0f, 0.0f,
+		1.0f, -1.0f, 0.0f,
+		-1.0f, 1.0f, 0.0f,
+		-1.0f, 1.0f, 0.0f,
+		1.0f, -1.0f, 0.0f,
+		1.0f, 1.0f, 0.0f,
+	};
 
 	glGenBuffers(1, &m_vertexbuffer_right);
 	glBindBuffer(GL_ARRAY_BUFFER, m_vertexbuffer_right);
@@ -433,6 +478,9 @@ void CameriftInstance::InitGL()
 	glGenBuffers(1, &m_vertexbuffer_scaled_right);
 	glBindBuffer(GL_ARRAY_BUFFER, m_vertexbuffer_scaled_right);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(right_quad_scaled), right_quad_scaled, GL_STATIC_DRAW);
+	glGenBuffers(1, &m_vertexbuffer_full);
+	glBindBuffer(GL_ARRAY_BUFFER, m_vertexbuffer_full);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(full_quad), full_quad, GL_STATIC_DRAW);
 	//Uv map for left
 	static const GLfloat left_uv[] = {
 		0.0f, 0.0f,
@@ -526,6 +574,14 @@ void CameriftInstance::InitGL()
 
 
 	m_camera_timer = glfwGetTime();
+
+	//Fun stuff
+	m_toonShader = LoadShaders("cartoon.vsh.glsl", "cartoon.fsh.glsl");
+	m_ResId = glGetUniformLocation(m_toonShader, "screenres");
+	m_toonTEXId = glGetUniformLocation(m_toonShader, "textureSampler");
+	GenerateFramebuffer(m_width, m_height, m_toonFBO, m_toonTEX, m_toonDEP);
+
+
 	//Test if the Framebuffer etc. is ok, and if yes, we are ready to start!
 	if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
 		std::cerr << "Error in OpenGL creation. Make shoure your GPU supports 3.3!\n Framebuffer(!)\n";
